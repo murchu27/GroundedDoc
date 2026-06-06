@@ -26,7 +26,7 @@ Return the verified answer with citations preserved.
 """
 
 research_agent = Agent(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     name="research_agent",
     description="Retrieves grounded answers and conflict reports from the document index.",
     instruction=research_instruction,
@@ -34,7 +34,7 @@ research_agent = Agent(
 )
 
 verifier_agent = Agent(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     name="verifier_agent",
     description="Verifies citations and conflict handling in grounded answers.",
     instruction=verifier_instruction,
