@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from grounded_doc_agent.agents.pipeline import DocumentPipeline, predict_for_eval
@@ -37,21 +37,36 @@ def get_pipeline() -> DocumentPipeline:
     return _pipeline
 
 
+def _check_api_key(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> None:
+    required = os.getenv("GROUNDED_REQUIRE_API_KEY", "false").lower() == "true"
+    if not required:
+        return
+    expected = os.getenv("GROUNDED_API_KEY")
+    if not expected or x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/query")
-def query(request: QueryRequest) -> dict[str, Any]:
-    _check_api_key()
+def query(
+    request: QueryRequest,
+    _: None = Depends(_check_api_key),
+) -> dict[str, Any]:
     response = get_pipeline().run(request.query, variant=request.variant)
     return response.to_dict()
 
 
 @app.post("/ingest")
-def ingest(request: IngestRequest) -> dict[str, Any]:
-    _check_api_key()
+def ingest(
+    request: IngestRequest,
+    _: None = Depends(_check_api_key),
+) -> dict[str, Any]:
     if not request.rebuild:
         report_path = INDEX_DIR / "ingestion_report.json"
         if report_path.exists():
@@ -63,7 +78,7 @@ def ingest(request: IngestRequest) -> dict[str, Any]:
 
 
 @app.get("/conflicts")
-def conflicts() -> dict[str, Any]:
+def conflicts(_: None = Depends(_check_api_key)) -> dict[str, Any]:
     pipeline = get_pipeline().pipeline
     items = pipeline.claims_store.list_conflicts()
     return {
@@ -79,15 +94,8 @@ def conflicts() -> dict[str, Any]:
 
 
 @app.post("/eval/predict")
-def eval_predict(request: QueryRequest) -> dict[str, Any]:
+def eval_predict(
+    request: QueryRequest,
+    _: None = Depends(_check_api_key),
+) -> dict[str, Any]:
     return predict_for_eval({"query": request.query}, variant=request.variant)
-
-
-def _check_api_key() -> None:
-    required = os.getenv("GROUNDED_REQUIRE_API_KEY", "false").lower() == "true"
-    if not required:
-        return
-    provided = os.getenv("X_API_KEY") or os.getenv("GROUNDED_API_KEY")
-    expected = os.getenv("GROUNDED_API_KEY")
-    if not expected or provided != expected:
-        raise HTTPException(status_code=401, detail="Invalid API key")

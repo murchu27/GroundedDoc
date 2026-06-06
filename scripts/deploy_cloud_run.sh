@@ -20,11 +20,13 @@ gcloud services enable \
 PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-gcloud secrets add-iam-policy-binding grounded-doc-gemini-key \
-  --project "${PROJECT_ID}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/secretmanager.secretAccessor" \
-  --quiet >/dev/null
+for secret in grounded-doc-gemini-key grounded-doc-api-key; do
+  gcloud secrets add-iam-policy-binding "${secret}" \
+    --project "${PROJECT_ID}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/secretmanager.secretAccessor" \
+    --quiet >/dev/null
+done
 
 submit_build() {
   gcloud builds submit \
@@ -50,7 +52,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --cpu 1 \
   --min-instances 0 \
   --max-instances 2 \
-  --set-secrets "GOOGLE_API_KEY=grounded-doc-gemini-key:latest" \
+  --set-secrets "GOOGLE_API_KEY=grounded-doc-gemini-key:latest,GROUNDED_API_KEY=grounded-doc-api-key:latest" \
   --set-env-vars "GROUNDED_REQUIRE_API_KEY=true,MLFLOW_TRACKING_URI=/tmp/mlruns"
 
 echo "Deployed ${SERVICE_NAME} to Cloud Run"
