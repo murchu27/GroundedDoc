@@ -1,0 +1,92 @@
+[
+  {
+    "inputs": {"query": "What is the data retention period under GDPR guidance?"},
+    "expectations": {
+      "expected_retrieval_strategy": "vector",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["gdpr_summary"]
+    }
+  },
+  {
+    "inputs": {"query": "Compare data retention requirements in GDPR vs PIPEDA."},
+    "expectations": {
+      "expected_retrieval_strategy": "claims",
+      "should_refuse": false,
+      "has_conflict": true,
+      "expected_doc_ids": ["gdpr_summary", "pipeda_summary"]
+    }
+  },
+  {
+    "inputs": {"query": "What retention period does ACME apply to free tier users?"},
+    "expectations": {
+      "expected_retrieval_strategy": "vector",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["acme_privacy_policy"]
+    }
+  },
+  {
+    "inputs": {"query": "Does ACME retention for free tier users align with GDPR and PIPEDA guidance?"},
+    "expectations": {
+      "expected_retrieval_strategy": "multi_hop",
+      "should_refuse": false,
+      "has_conflict": true,
+      "expected_doc_ids": ["acme_privacy_policy", "gdpr_summary", "pipeda_summary"]
+    }
+  },
+  {
+    "inputs": {"query": "How do I define dependencies in FastAPI?"},
+    "expectations": {
+      "expected_retrieval_strategy": "vector",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["fastapi_current"]
+    }
+  },
+  {
+    "inputs": {"query": "What changed in dependency injection between the migration guide and current docs?"},
+    "expectations": {
+      "expected_retrieval_strategy": "multi_hop",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["fastapi_current", "fastapi_migration"]
+    }
+  },
+  {
+    "inputs": {"query": "What is the weather in Toronto today?"},
+    "expectations": {
+      "expected_retrieval_strategy": "none",
+      "should_refuse": true,
+      "has_conflict": false,
+      "expected_doc_ids": []
+    }
+  },
+  {
+    "inputs": {"query": "Summarize third-party sharing obligations across GDPR and PIPEDA."},
+    "expectations": {
+      "expected_retrieval_strategy": "parent",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["gdpr_summary", "pipeda_summary"]
+    }
+  },
+  {
+    "inputs": {"query": "What APIRouter guidance appears in the current FastAPI docs?"},
+    "expectations": {
+      "expected_retrieval_strategy": "bm25",
+      "should_refuse": false,
+      "has_conflict": false,
+      "expected_doc_ids": ["fastapi_current"]
+    }
+  },
+  {
+    "inputs": {"query": "What stock price did ACME report last quarter?"},
+    "expectations": {
+      "expected_retrieval_strategy": "none",
+      "should_refuse": true,
+      "has_conflict": false,
+      "expected_doc_ids": []
+    }
+  }
+]

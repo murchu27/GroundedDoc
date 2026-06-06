@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+mlruns/
+mlflow.db
+data/index/
+*.egg-info/
+dist/
+build/
+.env
+agents/grounded_doc/.env
+.DS_Store

@@ -1,0 +1,15 @@
+substitutions:
+  _SERVICE_NAME: grounded-doc-agent
+  _IMAGE_TAG: latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${_IMAGE_TAG}
+      - -f
+      - infra/Dockerfile
+      - .
+images:
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${_IMAGE_TAG}
