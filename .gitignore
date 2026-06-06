@@ -16,3 +16,6 @@ agents/grounded_doc/.env
 
 # Local notes
 my_log.md
+
+# ADK artifacts (e.g., session data)
+.adk/
