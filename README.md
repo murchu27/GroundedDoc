@@ -39,12 +39,14 @@ python -m grounded_doc_agent.eval.run_eval --compare-ab
 
 ## ADK Agent
 
-The ADK entrypoint lives in `agents/grounded_doc/agent.py` and exposes a sequential multi-agent workflow.
+The ADK entrypoint lives in `agents/grounded_doc/agent.py` and exposes a sequential multi-agent workflow. The `grounded_doc_agent/` directory is the Python library package; `agents/grounded_doc/` is the ADK web entrypoint.
 
 ```bash
+# Prerequisites: pip install ., indexes built (ingestion CLI), API key set
 export GOOGLE_API_KEY=your-key
-adk web --port 8000
-# run from repo root; select grounded_doc agent in UI
+
+adk web agents --port 8000
+# Open http://localhost:8000 and select "grounded_doc" (not "grounded_doc_agent")
 ```
 
 ## API / Cloud Run
