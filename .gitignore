@@ -13,3 +13,6 @@ build/
 .env
 agents/grounded_doc/.env
 .DS_Store
+
+# Local notes
+my_log.md
