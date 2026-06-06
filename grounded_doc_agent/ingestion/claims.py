@@ -6,8 +6,9 @@ import uuid
 from grounded_doc_agent.models import ChildChunk, Claim, ClaimConflict, DocumentSection
 
 RETENTION_PATTERN = re.compile(
-    r"(?P<subject>(?:data retention|retention period|personal data retention|retention)[^.:\n]*)"
-    r"[^.\n]{0,80}?(?P<value>\d+\s*(?:days|months|years))",
+    r"(?P<subject>(?:data retention|retention period|personal data retention|"
+    r"retention(?!\s+is\b))[^.:\n]*)"
+    r"[^.\n]{0,80}?(?P<value>(?<!\d)\d+\s*(?:days|months|years))",
     re.IGNORECASE,
 )
 SIMPLE_RETENTION_PATTERN = re.compile(

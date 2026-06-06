@@ -30,6 +30,34 @@ def test_parse_markdown_sections():
     assert sections[0].section_path == "retention"
 
 
+def test_retention_pattern_does_not_split_multi_digit_values():
+    sections = [
+        DocumentSection(
+            "gdpr_summary",
+            "data-retention",
+            "Data Retention",
+            "Typical guidance indicates personal data retention should not exceed 30 days "
+            "unless a longer period is legally justified.",
+        ),
+        DocumentSection(
+            "pipeda_summary",
+            "data-retention",
+            "Data Retention",
+            "For many consumer services, personal data retention is commonly set to 90 days "
+            "after account closure unless law requires longer storage.",
+        ),
+    ]
+    claims = []
+    for section in sections:
+        claims.extend(extract_claims_from_section(section))
+    retention_values = {
+        claim.value for claim in claims if claim.subject == "data_retention"
+    }
+    assert "0 days" not in retention_values
+    assert "30 days" in retention_values
+    assert "90 days" in retention_values
+
+
 def test_conflict_detection():
     sections = [
         DocumentSection("gdpr_summary", "data-retention", "Retention", "retention is 30 days"),
