@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "GroundedDoc Privacy Reviewer",
+  "version": "0.1.0",
+  "description": "Analyze privacy policy pages with grounded GDPR guidance and citations.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Review privacy policy",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
