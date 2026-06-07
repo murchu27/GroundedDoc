@@ -8,6 +8,7 @@ Agentic document intelligence with hierarchical indexing, query decomposition, c
 - **Agentic query layer:** query planner, adaptive retrieval (vector/BM25/claims/multi-hop), citation verifier loop
 - **Evaluation:** MLflow `genai.evaluate` with custom scorers and A/B experiment runs
 - **Deployment:** FastAPI service + Cloud Run Dockerfile (~$0/month on GCP free tiers)
+- **Privacy policy extension:** browser extension + `POST /analyze` for grounded GDPR review of arbitrary pages
 
 ## Architecture
 
@@ -55,6 +56,25 @@ adk web agents --port 8000
 uvicorn api.main:app --reload --port 8080
 ```
 
+Analyze a privacy policy page (used by the browser extension):
+
+```bash
+curl -X POST http://localhost:8080/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"page_text":"## Data Retention\nWe retain data for 90 days.","url":"https://example.com/privacy"}'
+```
+
+## Browser Extension
+
+Load `extension/` as an unpacked extension in Chrome:
+
+1. Build indexes (`python -m grounded_doc_agent.ingestion.cli`)
+2. Start the API (`uvicorn api.main:app --reload --port 8080`)
+3. Open `chrome://extensions`, enable Developer mode, load unpacked, select `extension/`
+4. Open a privacy policy page and click the extension icon
+
+The popup extracts page text, calls `POST /analyze`, and renders cited findings. Results are informational only, not legal advice.
+
 Docker:
 
 ```bash
@@ -91,7 +111,20 @@ CI fails if core metrics drop below thresholds (0.85 recall, 0.90 citation fidel
 - `data/corpus/gdpr_summary.md`
 - `data/corpus/pipeda_summary.md`
 - `data/corpus/acme_privacy_policy.md`
+- `data/corpus/regulatory/` (structured GDPR requirement cards)
 - `data/corpus/fastapi_current.md`
 - `data/corpus/fastapi_migration.md`
 
 Intentional retention conflicts are included for demo/eval purposes.
+
+## Optional GCS Persistence
+
+For Cloud Run deployments with dynamic policy ingest:
+
+```bash
+pip install '.[gcp]'
+export GROUNDED_STORAGE_BACKEND=gcs
+export GROUNDED_GCS_BUCKET=your-bucket
+```
+
+On startup the API syncs `index/base/` from GCS. Ingested policies are stored under `corpus/policies/{hash}/`.
