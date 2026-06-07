@@ -21,3 +21,6 @@ MLFLOW_TRACKING_URI = os.getenv(
     f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}",
 )
 MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "grounded-doc-agent")
+
+STORAGE_BACKEND = os.getenv("GROUNDED_STORAGE_BACKEND", "local").lower()
+GCS_BUCKET = os.getenv("GROUNDED_GCS_BUCKET", "")
