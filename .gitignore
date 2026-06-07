@@ -19,3 +19,6 @@ my_log.md
 
 # ADK artifacts (e.g., session data)
 .adk/
+
+# Document ingestion artifacts
+data/policies/
