@@ -6,21 +6,9 @@ import pytest
 
 from grounded_doc_agent.agents.pipeline import DocumentPipeline
 from grounded_doc_agent.agents.planner import build_retrieval_plan, classify_query
-from grounded_doc_agent.config.settings import CORPUS_DIR, INDEX_DIR
 from grounded_doc_agent.ingestion.claims import detect_conflicts, extract_claims_from_section
 from grounded_doc_agent.ingestion.parser import parse_markdown_text
-from grounded_doc_agent.ingestion.pipeline import IngestionPipeline
 from grounded_doc_agent.models import DocumentSection, QueryType
-
-
-@pytest.fixture(scope="session")
-def indexed_pipeline() -> IngestionPipeline:
-    report_path = INDEX_DIR / "ingestion_report.json"
-    if report_path.exists():
-        return IngestionPipeline.load_existing(INDEX_DIR)
-    pipeline = IngestionPipeline(corpus_dir=CORPUS_DIR, index_dir=INDEX_DIR)
-    pipeline.run()
-    return pipeline
 
 
 def test_parse_markdown_sections():

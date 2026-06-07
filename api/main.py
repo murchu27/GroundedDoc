@@ -1,20 +1,18 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from grounded_doc_agent.agents.analyze import analyze_policy
 from grounded_doc_agent.agents.pipeline import DocumentPipeline, predict_for_eval
 from grounded_doc_agent.config.settings import INDEX_DIR
 from grounded_doc_agent.ingestion.pipeline import IngestionPipeline
-
-app = FastAPI(
-    title="GroundedDoc Agent API",
-    description="Conflict-aware document intelligence agent",
-    version="0.1.0",
-)
+from grounded_doc_agent.storage.backend import maybe_sync_index
 
 _pipeline: DocumentPipeline | None = None
 
@@ -26,6 +24,37 @@ class QueryRequest(BaseModel):
 
 class IngestRequest(BaseModel):
     rebuild: bool = True
+
+
+class AnalyzeRequest(BaseModel):
+    page_text: str = Field(..., min_length=50)
+    url: str = Field(default="")
+    questions: list[str] = Field(default_factory=list)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    maybe_sync_index(INDEX_DIR)
+    yield
+
+
+app = FastAPI(
+    title="GroundedDoc Agent API",
+    description="Conflict-aware document intelligence agent",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+cors_origins = [
+    origin.strip() for origin in os.getenv("GROUNDED_CORS_ORIGINS", "*").split(",") if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_pipeline() -> DocumentPipeline:
@@ -60,6 +89,20 @@ def query(
 ) -> dict[str, Any]:
     response = get_pipeline().run(request.query, variant=request.variant)
     return response.to_dict()
+
+
+@app.post("/analyze")
+def analyze(
+    request: AnalyzeRequest,
+    _: None = Depends(_check_api_key),
+) -> dict[str, Any]:
+    questions = request.questions or None
+    return analyze_policy(
+        get_pipeline(),
+        page_text=request.page_text,
+        url=request.url,
+        questions=questions,
+    )
 
 
 @app.post("/ingest")
