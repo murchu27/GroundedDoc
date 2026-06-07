@@ -53,6 +53,6 @@ gcloud run deploy "${SERVICE_NAME}" \
   --min-instances 0 \
   --max-instances 2 \
   --set-secrets "GOOGLE_API_KEY=grounded-doc-gemini-key:latest,GROUNDED_API_KEY=grounded-doc-api-key:latest" \
-  --set-env-vars "GROUNDED_REQUIRE_API_KEY=true,MLFLOW_TRACKING_URI=/tmp/mlruns"
+  --set-env-vars "GROUNDED_REQUIRE_API_KEY=true,MLFLOW_TRACKING_URI=/tmp/mlruns,GROUNDED_CORS_ORIGINS=*"
 
 echo "Deployed ${SERVICE_NAME} to Cloud Run"
