@@ -9,6 +9,16 @@ from grounded_doc_agent.models import AgentResponse, ClaimConflict, PipelineTrac
 
 REFUSAL_PHRASE = "I don't have sufficient evidence in the indexed documents to answer that question."
 
+CHUNK_MARKER_IN_CITATION = re.compile(
+    r"\[([^\]|]+?\s+§[^\]|]+?)\s*\|\s*chunk=[^\]]+\]",
+    re.IGNORECASE,
+)
+
+
+def clean_analyze_answer(answer: str) -> str:
+    cleaned = CHUNK_MARKER_IN_CITATION.sub(r"[\1]", answer)
+    return re.sub(r"\s+\]", "]", cleaned)
+
 
 def synthesize_answer(
     query: str,
@@ -29,6 +39,90 @@ def synthesize_answer(
             return answer, citations
 
     return _synthesize_extractive(query, contexts, conflicts)
+
+
+def _score_regulatory_context(ctx: RetrievedContext, regulatory_doc_hints: list[str]) -> float:
+    score = ctx.score
+    for index, hint in enumerate(regulatory_doc_hints):
+        if hint in ctx.doc_id:
+            score += 10.0 - index
+    return score
+
+
+def synthesize_analyze_answer(
+    query: str,
+    contexts: list[RetrievedContext],
+    conflicts: list[ClaimConflict],
+    *,
+    policy_doc_id: str,
+    regulatory_doc_hints: list[str] | None = None,
+    use_llm: bool | None = None,
+) -> tuple[str, list[dict[str, str]]]:
+    if not contexts:
+        return REFUSAL_PHRASE, []
+
+    policy_contexts = sorted(
+        [ctx for ctx in contexts if ctx.doc_id == policy_doc_id],
+        key=lambda item: item.score,
+        reverse=True,
+    )[:2]
+    hints = regulatory_doc_hints or []
+    regulatory_contexts = sorted(
+        [ctx for ctx in contexts if ctx.doc_id != policy_doc_id],
+        key=lambda item: _score_regulatory_context(item, hints),
+        reverse=True,
+    )[:1]
+    selected = policy_contexts + regulatory_contexts
+    if not selected:
+        return REFUSAL_PHRASE, []
+
+    if use_llm is None:
+        use_llm = bool(os.getenv("GOOGLE_API_KEY"))
+
+    if use_llm:
+        answer, citations = _synthesize_with_gemini(
+            query,
+            selected,
+            conflicts,
+            citation_format="doc_section_only",
+        )
+        if answer:
+            return clean_analyze_answer(answer), citations
+
+    return _synthesize_analyze_extractive(
+        query,
+        policy_contexts,
+        regulatory_contexts,
+        conflicts,
+    )
+
+
+def _synthesize_analyze_extractive(
+    query: str,
+    policy_contexts: list[RetrievedContext],
+    regulatory_contexts: list[RetrievedContext],
+    conflicts: list[ClaimConflict],
+) -> tuple[str, list[dict[str, str]]]:
+    ordered = policy_contexts[:2] + regulatory_contexts[:1]
+    citations = [
+        {
+            "chunk_id": ctx.chunk_id,
+            "doc_id": ctx.doc_id,
+            "section_path": ctx.section_path,
+            "source": ctx.source_url or ctx.doc_id,
+        }
+        for ctx in ordered
+    ]
+    answer_parts = [f"Based on the indexed documents for '{query}':"]
+    for idx, ctx in enumerate(ordered, start=1):
+        answer_parts.append(
+            f"{idx}. [{ctx.doc_id} §{ctx.section_path}] {ctx.text.strip()[:350]}"
+        )
+    if conflicts:
+        answer_parts.append("Conflicting sources detected:")
+        for conflict in conflicts:
+            answer_parts.append(f"- {conflict.description}")
+    return "\n".join(answer_parts), citations
 
 
 def _synthesize_extractive(
@@ -63,6 +157,8 @@ def _synthesize_with_gemini(
     query: str,
     contexts: list[RetrievedContext],
     conflicts: list[ClaimConflict],
+    *,
+    citation_format: str = "doc_section_or_chunk",
 ) -> tuple[str, list[dict[str, str]]]:
     try:
         from google import genai
@@ -75,9 +171,15 @@ def _synthesize_with_gemini(
         for ctx in contexts[:5]
     )
     conflict_block = "\n".join(conflict.description for conflict in conflicts)
+    citation_instruction = (
+        "Include bracket citations using only [doc_id §section_path]. "
+        "Do not include chunk IDs or internal markers in citations."
+        if citation_format == "doc_section_only"
+        else "Include bracket citations like [doc_id §section_path]. "
+    )
     prompt = (
         "Answer the user question using ONLY the provided context. "
-        "Include bracket citations like [doc_id §section_path]. "
+        f"{citation_instruction} "
         "If sources conflict, explicitly mention both sides.\n\n"
         f"Question: {query}\n\nContext:\n{context_block}\n\n"
         f"Known conflicts:\n{conflict_block or 'None'}"
