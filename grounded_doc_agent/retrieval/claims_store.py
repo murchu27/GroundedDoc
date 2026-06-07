@@ -45,6 +45,25 @@ class ClaimsStore:
             conn.execute("DELETE FROM claims")
             conn.execute("DELETE FROM conflicts")
 
+    def delete_claims_for_doc(self, doc_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM claims WHERE doc_id = ?", (doc_id,))
+
+    def list_all_claims(self) -> list[Claim]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM claims").fetchall()
+        return [self._row_to_claim(row) for row in rows]
+
+    def rebuild_conflicts(self) -> list[ClaimConflict]:
+        from grounded_doc_agent.ingestion.claims import detect_conflicts
+
+        claims = self.list_all_claims()
+        conflicts = detect_conflicts(claims)
+        with self._connect() as conn:
+            conn.execute("DELETE FROM conflicts")
+        self.upsert_conflicts(conflicts)
+        return conflicts
+
     def upsert_claims(self, claims: list[Claim]) -> None:
         with self._connect() as conn:
             conn.executemany(

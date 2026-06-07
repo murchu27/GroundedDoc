@@ -10,7 +10,7 @@ from grounded_doc_agent.ingestion.claims import (
     extract_claims_from_child,
     extract_claims_from_section,
 )
-from grounded_doc_agent.ingestion.parser import load_corpus
+from grounded_doc_agent.ingestion.parser import load_corpus, parse_markdown_text
 from grounded_doc_agent.models import ChildChunk, ParentChunk
 from grounded_doc_agent.retrieval.bm25 import BM25Index
 from grounded_doc_agent.retrieval.claims_store import ClaimsStore
@@ -53,6 +53,7 @@ class IngestionPipeline:
         conflicts = detect_conflicts(claims)
         self.vector_index.add_parents(parents)
         self.vector_index.add_children(children)
+        self.vector_index.persist()
         self.child_bm25.build(children, level="child")
         self.parent_bm25.build(parents, level="parent")
         self.claims_store.upsert_claims(claims)
@@ -83,6 +84,69 @@ class IngestionPipeline:
             encoding="utf-8",
         )
         return report
+
+    def ingest_document(
+        self,
+        text: str,
+        *,
+        doc_id: str,
+        source_url: str = "",
+    ) -> dict:
+        self.remove_document(doc_id)
+
+        sections = parse_markdown_text(text, doc_id=doc_id, source_url=source_url)
+        parents: list[ParentChunk] = []
+        children: list[ChildChunk] = []
+        claims = []
+
+        for section in sections:
+            parent, section_children = build_hierarchical_chunks(section)
+            parents.append(parent)
+            children.extend(section_children)
+            claims.extend(extract_claims_from_section(section))
+            for child in section_children:
+                claims.extend(extract_claims_from_child(child))
+
+        if parents:
+            self.vector_index.add_parents(parents)
+        if children:
+            self.vector_index.add_children(children)
+        self.vector_index.persist()
+
+        if children:
+            self.child_bm25.append(children)
+        if parents:
+            self.parent_bm25.append(parents)
+
+        if claims:
+            self.claims_store.upsert_claims(claims)
+            conflicts = self.claims_store.rebuild_conflicts()
+        else:
+            conflicts = []
+
+        return {
+            "doc_id": doc_id,
+            "sections": len(sections),
+            "parent_chunks": len(parents),
+            "child_chunks": len(children),
+            "claims": len(claims),
+            "conflicts": [
+                {
+                    "subject": conflict.subject,
+                    "description": conflict.description,
+                    "sources": [claim.source_label for claim in conflict.claims],
+                }
+                for conflict in conflicts
+                if any(claim.doc_id == doc_id for claim in conflict.claims)
+            ],
+        }
+
+    def remove_document(self, doc_id: str) -> None:
+        self.vector_index.remove_doc(doc_id)
+        self.child_bm25.remove_doc(doc_id)
+        self.parent_bm25.remove_doc(doc_id)
+        self.claims_store.delete_claims_for_doc(doc_id)
+        self.claims_store.rebuild_conflicts()
 
     @classmethod
     def load_existing(cls, index_dir: Path = INDEX_DIR) -> "IngestionPipeline":

@@ -20,6 +20,15 @@ class BM25Index:
         tokenized = [self._tokenize(self._chunk_text(chunk)) for chunk in chunks]
         self._bm25 = BM25Okapi(tokenized) if tokenized else None
 
+    def append(self, chunks: list[ChildChunk | ParentChunk]) -> None:
+        if not chunks:
+            return
+        self.build([*self._chunks, *chunks], level=self._level)
+
+    def remove_doc(self, doc_id: str) -> None:
+        filtered = [chunk for chunk in self._chunks if chunk.doc_id != doc_id]
+        self.build(filtered, level=self._level)
+
     def search(self, query: str, top_k: int = 5) -> list[RetrievedContext]:
         if not self._bm25 or not self._chunks:
             return []

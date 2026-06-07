@@ -63,6 +63,23 @@ class VectorIndex:
                 }
             )
 
+    def remove_doc(self, doc_id: str) -> None:
+        self._entries = [entry for entry in self._entries if entry["doc_id"] != doc_id]
+        self._child_map = {
+            chunk_id: child
+            for chunk_id, child in self._child_map.items()
+            if child.doc_id != doc_id
+        }
+        self._parent_map = {
+            chunk_id: parent
+            for chunk_id, parent in self._parent_map.items()
+            if parent.doc_id != doc_id
+        }
+        self._persist_store()
+
+    def persist(self) -> None:
+        self._persist_store()
+
     def add_parents(self, parents: list[ParentChunk]) -> None:
         texts = [parent.summary for parent in parents]
         vectors = _SimpleEmbedder.embed(texts)
@@ -89,6 +106,18 @@ class VectorIndex:
 
     def get_child(self, chunk_id: str) -> ChildChunk | None:
         return self._child_map.get(chunk_id)
+
+    def get_chunk_text(self, chunk_id: str) -> str:
+        child = self._child_map.get(chunk_id)
+        if child:
+            return child.text
+        parent = self._parent_map.get(chunk_id)
+        if parent:
+            return parent.summary
+        for entry in self._entries:
+            if entry["chunk_id"] == chunk_id:
+                return entry["text"]
+        return ""
 
     def save_metadata(self, path: Path) -> None:
         payload = {
