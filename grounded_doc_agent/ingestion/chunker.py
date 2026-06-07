@@ -12,6 +12,16 @@ def _make_id(*parts: str) -> str:
     return digest[:16]
 
 
+def _advance_to_word_start(text: str, index: int) -> int:
+    if index <= 0 or index >= len(text):
+        return index
+    if text[index - 1].isspace():
+        return index
+    while index < len(text) and not text[index - 1].isspace():
+        index += 1
+    return min(index, len(text))
+
+
 def summarize_section(title: str, content: str, max_chars: int = 500) -> str:
     normalized = re.sub(r"\s+", " ", content).strip()
     lead = f"{title}: {normalized}"
@@ -55,7 +65,13 @@ def split_into_child_chunks(section: DocumentSection) -> list[ChildChunk]:
             continue
         start = 0
         while start < len(paragraph):
+            if start > 0:
+                start = _advance_to_word_start(paragraph, start)
             end = min(start + CHUNK_SIZE, len(paragraph))
+            if end < len(paragraph):
+                last_space = paragraph.rfind(" ", start, end)
+                if last_space > start + CHUNK_SIZE // 2:
+                    end = last_space
             piece = paragraph[start:end]
             chunk_id = _make_id(section.doc_id, section.section_path, piece[:80], str(start))
             chunks.append(
