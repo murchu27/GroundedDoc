@@ -1,3 +1,5 @@
+![GitHub License](https://img.shields.io/github/license/murchu27/GroundedDoc)
+
 # GroundedDoc Agent
 
 GroundedDoc answers questions over a collection of documents and backs every
@@ -167,3 +169,7 @@ export GROUNDED_GCS_BUCKET=your-bucket
 ```
 
 On startup the API syncs `index/base/` from GCS. Ingested policies are stored under `corpus/policies/{hash}/`.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
