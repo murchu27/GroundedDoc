@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 from grounded_doc_agent.agents.pipeline import DocumentPipeline
-from grounded_doc_agent.agents.planner import build_retrieval_plan, classify_query
+from grounded_doc_agent.agents.planner import build_retrieval_plan
 from grounded_doc_agent.ingestion.claims import detect_conflicts, extract_claims_from_section
 from grounded_doc_agent.ingestion.parser import parse_markdown_text
 from grounded_doc_agent.models import DocumentSection, QueryType

@@ -18,10 +18,6 @@ class StorageBackend(ABC):
     def persist_policy(self, doc_hash: str, text: str, metadata: dict) -> None:
         raise NotImplementedError
 
-    @abstractmethod
-    def persist_overlay(self, session_id: str, payload: dict) -> None:
-        raise NotImplementedError
-
 
 class LocalStorageBackend(StorageBackend):
     def sync_index_from_remote(self, index_dir: Path) -> None:
@@ -32,11 +28,6 @@ class LocalStorageBackend(StorageBackend):
         policy_dir.mkdir(parents=True, exist_ok=True)
         (policy_dir / "source.md").write_text(text, encoding="utf-8")
         (policy_dir / "meta.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-
-    def persist_overlay(self, session_id: str, payload: dict) -> None:
-        overlay_dir = INDEX_DIR.parent / "sessions" / session_id
-        overlay_dir.mkdir(parents=True, exist_ok=True)
-        (overlay_dir / "overlay.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 class GcsStorageBackend(StorageBackend):
@@ -62,10 +53,6 @@ class GcsStorageBackend(StorageBackend):
         meta_blob = self._bucket.blob(f"corpus/policies/{doc_hash}/meta.json")
         source_blob.upload_from_string(text, content_type="text/markdown")
         meta_blob.upload_from_string(json.dumps(metadata, indent=2), content_type="application/json")
-
-    def persist_overlay(self, session_id: str, payload: dict) -> None:
-        blob = self._bucket.blob(f"index/sessions/{session_id}/overlay.json")
-        blob.upload_from_string(json.dumps(payload, indent=2), content_type="application/json")
 
 
 def get_storage_backend() -> StorageBackend:

@@ -83,9 +83,3 @@ def build_retrieval_plan(query: str) -> RetrievalPlan:
         sub_queries=[query],
         strategies=[RetrievalStrategy.VECTOR, RetrievalStrategy.BM25],
     )
-
-
-def select_primary_strategy(plan: RetrievalPlan) -> RetrievalStrategy:
-    if not plan.strategies:
-        return RetrievalStrategy.VECTOR
-    return plan.strategies[0]

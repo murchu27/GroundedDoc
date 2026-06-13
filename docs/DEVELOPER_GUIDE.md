@@ -132,9 +132,7 @@ Stages:
   split on `^#{1,6}` headings via a single regex (line 9). Content before the first
   heading becomes an `intro` section; a file with no headings becomes one `root`
   section. `section_path` is the lowercased heading with spaces replaced by `-`
-  (line 58). **Only `.md` and `.txt` files are loaded** (`load_corpus`, lines 71-76)
-  - despite `pypdf` being a declared dependency, no PDF parsing exists (see section
-  13).
+  (line 58).
 - **Chunking** ([chunker.py](../grounded_doc_agent/ingestion/chunker.py)):
   paragraph-packing up to `CHUNK_SIZE` (400 chars) with `CHUNK_OVERLAP` (80 chars).
   Note chunk sizing is **character-based, not token-based**. Chunk IDs are
@@ -498,10 +496,6 @@ sharp edge.
   ([deploy_cloud_run.sh](../scripts/deploy_cloud_run.sh) line 56) - a local
   filesystem store on ephemeral container disk, so deployed traces do not persist
   across restarts.
-- **Unused declared dependencies.** `pypdf` and `httpx` are in
-  [pyproject.toml](../pyproject.toml) (lines 12 and 17) but are not imported anywhere
-  in the source. `pypdf` in particular implies PDF ingestion that does not exist
-  (the parser is markdown/text only).
 
 **Security posture (defaults are permissive by design for a portfolio demo)**
 
@@ -528,8 +522,6 @@ sharp edge.
 
 - Add `from collections.abc import Callable` to `analyze.py` (or remove the unused
   helper) and run `ruff` to confirm a clean lint baseline.
-- Decide whether `pypdf`/`httpx` should be removed or actually wired up (PDF
-  ingestion).
 - Confirm the Gemini model IDs against the live API, or move them to required config
   with validation.
 - If you expect real traffic, replace the JSON brute-force vector store with a proper

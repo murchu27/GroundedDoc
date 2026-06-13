@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import threading
 from typing import Any
+from collections.abc import Callable
 
 from grounded_doc_agent.agents.pipeline import DocumentPipeline
 from grounded_doc_agent.agents.synthesizer import (

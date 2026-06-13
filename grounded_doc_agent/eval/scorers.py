@@ -12,8 +12,6 @@ def retrieval_recall(outputs, expectations):
     if not expected_docs:
         return 1.0 if not outputs.get("retrieved_chunk_ids") else 0.0
     retrieved_docs = _extract_doc_ids(outputs)
-    if not expected_docs:
-        return 1.0
     overlap = expected_docs.intersection(retrieved_docs)
     return len(overlap) / len(expected_docs)
 
