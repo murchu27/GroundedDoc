@@ -1,13 +1,25 @@
 # API Reference
 
-The GroundedDoc FastAPI service is defined in [api/main.py](../api/main.py). Run
-it locally with:
+The GroundedDoc FastAPI service is defined in [api/main.py](../api/main.py).
+Request and response shapes are declared as Pydantic models in
+[api/schemas.py](../api/schemas.py). Run it locally with:
 
 ```bash
 uvicorn api.main:app --reload --port 8080
 ```
 
 All examples below assume `http://localhost:8080`.
+
+## OpenAPI schemas
+
+Interactive docs and the machine-readable schema are available while the server
+is running:
+
+- Swagger UI: [http://localhost:8080/docs](http://localhost:8080/docs)
+- OpenAPI JSON: [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json)
+
+Each endpoint below names its Pydantic response model. See `/docs` for full field
+lists and types.
 
 ## Authentication
 
@@ -31,7 +43,7 @@ Liveness check. Always unauthenticated.
 curl http://localhost:8080/health
 ```
 
-Response:
+Response: `HealthResponse`
 
 ```json
 { "status": "ok" }
@@ -41,7 +53,7 @@ Response:
 
 Ask a question against the indexed corpus and get a cited, verified answer.
 
-Request body:
+Request body: `QueryRequest`
 
 | Field | Type | Required | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -54,8 +66,8 @@ curl -X POST http://localhost:8080/query \
   -d '{"query":"Compare GDPR vs PIPEDA retention"}'
 ```
 
-Returns the serialized response (answer text, citations, retrieval metadata, and
-any surfaced conflicts).
+Returns `QueryResponse` (answer text, citations, retrieval metadata, trace spans,
+and any surfaced conflicts).
 
 ### `POST /analyze`
 
@@ -63,7 +75,7 @@ Analyze a single page of text (for example a privacy policy) against the corpus.
 This powers the browser extension. Results are informational only, not legal
 advice.
 
-Request body:
+Request body: `AnalyzeRequest`
 
 | Field | Type | Required | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -77,13 +89,14 @@ curl -X POST http://localhost:8080/analyze \
   -d '{"page_text":"## Data Retention\nWe retain data for 90 days.","url":"https://example.com/privacy"}'
 ```
 
-Returns cited findings comparing the page against indexed regulations.
+Returns `AnalyzeResponse` with cited findings comparing the page against indexed
+regulations.
 
 ### `POST /ingest`
 
 Rebuild the document indexes from the corpus.
 
-Request body:
+Request body: `IngestRequest`
 
 | Field | Type | Required | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -95,8 +108,9 @@ curl -X POST http://localhost:8080/ingest \
   -d '{"rebuild":true}'
 ```
 
-Returns `{"status":"completed", ...}` with the ingestion report, or
-`{"status":"skipped"}` when `rebuild` is `false` and an index is already present.
+Returns `IngestResponse`: `{"status":"completed", ...}` with the ingestion report,
+or `{"status":"skipped","reason":"..."}` when `rebuild` is `false` and an index
+is already present.
 
 ### `GET /conflicts`
 
@@ -106,7 +120,7 @@ List cross-document conflicts detected during ingestion.
 curl http://localhost:8080/conflicts
 ```
 
-Response shape:
+Response: `ConflictsResponse`
 
 ```json
 {
@@ -123,7 +137,7 @@ Response shape:
 ### `POST /eval/predict`
 
 Prediction entry point used by the MLflow evaluation harness. Takes the same body
-as `/query` and returns a prediction payload shaped for the evaluation scorers.
+as `/query` (`QueryRequest`) and returns `QueryResponse` for the evaluation scorers.
 
 ```bash
 curl -X POST http://localhost:8080/eval/predict \

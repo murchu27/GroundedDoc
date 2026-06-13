@@ -8,6 +8,20 @@ from fastapi.testclient import TestClient
 from api.main import app
 
 
+MOCK_QUERY_RESPONSE = {
+    "query": "test query",
+    "answer": "ok",
+    "citations": [],
+    "retrieved_chunk_ids": [],
+    "retrieval_strategy": "vector",
+    "query_type": "LOOKUP",
+    "sub_queries": ["test query"],
+    "conflicts": [],
+    "refused": False,
+    "trace_spans": [],
+}
+
+
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
@@ -17,13 +31,13 @@ def client() -> TestClient:
 def mock_pipeline(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     pipeline = MagicMock()
     response = MagicMock()
-    response.to_dict.return_value = {"answer": "ok", "query": "test query"}
+    response.to_dict.return_value = MOCK_QUERY_RESPONSE
     pipeline.run.return_value = response
     pipeline.pipeline.claims_store.list_conflicts.return_value = []
     monkeypatch.setattr("api.main.get_pipeline", lambda: pipeline)
     monkeypatch.setattr(
         "api.main.predict_for_eval",
-        lambda payload, variant="full_pipeline": {"answer": "eval"},
+        lambda payload, variant="full_pipeline": MOCK_QUERY_RESPONSE,
     )
     return pipeline
 

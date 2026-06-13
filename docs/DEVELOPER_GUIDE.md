@@ -57,14 +57,14 @@ There are 60 tracked files. Grouped by role:
 | Agents / query layer | [grounded_doc_agent/agents/](../grounded_doc_agent/agents/) (`pipeline.py`, `planner.py`, `retriever.py`, `synthesizer.py`, `analyze.py`, `tools.py`) |
 | Evaluation | [grounded_doc_agent/eval/](../grounded_doc_agent/eval/) (`run_eval.py`, `scorers.py`, `golden_dataset.json`) |
 | Storage | [grounded_doc_agent/storage/backend.py](../grounded_doc_agent/storage/backend.py) |
-| API | [api/main.py](../api/main.py) |
+| API | [api/main.py](../api/main.py), [api/schemas.py](../api/schemas.py) |
 | ADK entrypoint | [agents/grounded_doc/agent.py](../agents/grounded_doc/agent.py) |
 | Browser extension | [extension/](../extension/) (`manifest.json`, `content.js`, `popup.js`, `popup.html`, `popup.css`) |
 | Infra / deploy | [infra/Dockerfile](../infra/Dockerfile), [infra/cloudbuild.yaml](../infra/cloudbuild.yaml), [scripts/deploy_cloud_run.sh](../scripts/deploy_cloud_run.sh) |
 | CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml) |
-| Tests | [tests/](../tests/) (`conftest.py`, `test_pipeline.py`, `test_pipeline_runtime.py`, `test_analyze.py`, `test_api_auth.py`, `test_chunker.py`, `test_scorers.py`, `test_settings.py`) |
+| Tests | [tests/](../tests/) (`conftest.py`, `test_pipeline.py`, `test_pipeline_runtime.py`, `test_analyze.py`, `test_api_auth.py`, `test_api_schemas.py`, `test_chunker.py`, `test_scorers.py`, `test_settings.py`) |
 | Sample corpus | [data/corpus/](../data/corpus/) (GDPR/PIPEDA/ACME summaries, `regulatory/` requirement cards, FastAPI docs) |
-| Docs | [docs/architecture.md](architecture.md), this file |
+| Docs | [docs/architecture.md](architecture.md), [docs/api.md](api.md), this file |
 
 Note there is **no** `agents/__init__.py` (only `agents/grounded_doc/__init__.py`,
 which does `from . import agent`). `agents/` is an ADK agents directory, not a Python
@@ -75,8 +75,8 @@ package you import.
 ## 3. Core data model
 
 All cross-module data structures are plain `@dataclass`es in
-[grounded_doc_agent/models.py](../grounded_doc_agent/models.py). There are no Pydantic
-models here (Pydantic is only used for FastAPI request bodies in `api/main.py`).
+[grounded_doc_agent/models.py](../grounded_doc_agent/models.py). Pydantic models for
+the HTTP API live separately in [api/schemas.py](../api/schemas.py).
 
 - Two string enums drive routing: `QueryType` (`LOOKUP`, `COMPARE`, `MULTI_HOP`,
   `SUMMARIZE`, `OUT_OF_SCOPE`) and `RetrievalStrategy` (`vector`, `bm25`, `claims`,
@@ -288,6 +288,11 @@ or the LLM wording, expect those tests to move.
 
 - Endpoints: `GET /health`, `POST /query`, `POST /analyze`, `POST /ingest`,
   `GET /conflicts`, `POST /eval/predict`.
+- Request and response contracts are Pydantic models in
+  [api/schemas.py](../api/schemas.py) (`QueryRequest`, `QueryResponse`,
+  `AnalyzeResponse`, etc.). Each route declares a `response_model`; handlers
+  validate pipeline output with `Model.model_validate(...)` before returning.
+  Interactive schemas: `/docs` and `/openapi.json` when the server is running.
 - All endpoints delegate to the shared library singleton
   (`get_pipeline`, `reset_pipeline` in
   [pipeline.py](../grounded_doc_agent/agents/pipeline.py)). On first use,
