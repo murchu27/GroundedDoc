@@ -1,5 +1,5 @@
-GitHub License
-[CI](https://github.com/murchu27/GroundedDoc/actions/workflows/ci.yml)
+![GitHub License](https://img.shields.io/github/license/murchu27/GroundedDoc)
+[![CI](https://github.com/murchu27/GroundedDoc/actions/workflows/ci.yml/badge.svg)](https://github.com/murchu27/GroundedDoc/actions/workflows/ci.yml)
 
 # GroundedDoc Agent
 
@@ -14,13 +14,13 @@ In short, GroundedDoc is about *trustworthy* document answers. Three properties
 follow from that goal and shape the whole system:
 
 - **Grounding.** Every factual statement maps to a cited source passage; nothing
-is asserted without evidence.
+  is asserted without evidence.
 - **Conflict awareness.** When two sources disagree (for example, on a data
-retention period), the disagreement is reported rather than silently resolved.
+  retention period), the disagreement is reported rather than silently resolved.
 - **Honest refusal.** When the corpus cannot support an answer, the agent says so
-instead of guessing.
+  instead of guessing.
 
-Example screenshot
+![Example screenshot](docs/example.png)
 
 ## Architecture
 
@@ -120,17 +120,17 @@ GCP_PROJECT_ID=your-project ./scripts/deploy_cloud_run.sh
 Each query in the golden dataset is scored on the properties the project cares
 about, so quality regressions show up as numbers rather than vibes:
 
-- `**retrieval_recall**` -- fraction of the expected source documents that were
-actually retrieved. Measures whether the right evidence was found.
-- `**citation_fidelity**` -- fraction of an answer's citations that point to
-passages that were genuinely retrieved. Catches fabricated or mismatched
-citations.
-- `**retrieval_strategy_match**` -- whether the planner chose the expected
-retrieval strategy (or a compatible one) for a given query type.
-- `**refusal_correctness**` -- whether the agent refused exactly when it should
-have: refusing unanswerable questions and answering answerable ones.
-- `**conflict_surfaced**` -- whether known cross-document conflicts are explicitly
-reported in the answer instead of being hidden.
+- **`retrieval_recall`** -- fraction of the expected source documents that were
+  actually retrieved. Measures whether the right evidence was found.
+- **`citation_fidelity`** -- fraction of an answer's citations that point to
+  passages that were genuinely retrieved. Catches fabricated or mismatched
+  citations.
+- **`retrieval_strategy_match`** -- whether the planner chose the expected
+  retrieval strategy (or a compatible one) for a given query type.
+- **`refusal_correctness`** -- whether the agent refused exactly when it should
+  have: refusing unanswerable questions and answering answerable ones.
+- **`conflict_surfaced`** -- whether known cross-document conflicts are explicitly
+  reported in the answer instead of being hidden.
 
 CI fails if core metrics drop below thresholds (0.85 recall, 0.90 citation
 fidelity, 1.0 refusal correctness).
@@ -141,16 +141,16 @@ GroundedDoc deliberately avoids paid, managed services so it can run on a laptop
 or a free cloud tier with no recurring bill:
 
 - **Embeddings run locally** with open `sentence-transformers` models, so there
-is no embedding API to pay for.
+  is no embedding API to pay for.
 - **The vector store is a plain JSON file on disk**, so no managed vector
-database is needed.
+  database is needed.
 - **Answer synthesis is optional.** Gemini Flash can be used if you provide an
-API key, but an extractive fallback produces cited answers with no key and no
-cost.
+  API key, but an extractive fallback produces cited answers with no key and no
+  cost.
 - **Experiment tracking uses a local SQLite file** (`mlflow.db`) rather than a
-hosted MLflow server.
+  hosted MLflow server.
 - **Hosting fits free tiers.** Cloud Run plus GCS free allowances comfortably
-cover portfolio-level traffic.
+  cover portfolio-level traffic.
 
 ## Sample corpus
 
@@ -159,13 +159,13 @@ queries immediately, and so the evaluation suite has known-good expected answers
 It lives under `data/corpus/`:
 
 - `gdpr_summary.md`, `pipeda_summary.md` -- plain-language summaries of two
-privacy regulations.
+  privacy regulations.
 - `acme_privacy_policy.md` -- a fictional company privacy policy to analyze
-against those regulations.
+  against those regulations.
 - `regulatory/` -- structured GDPR requirement "cards" used for claim-level
-retrieval.
+  retrieval.
 - `fastapi_current.md`, `fastapi_migration.md` -- a non-privacy topic, included
-to show retrieval works across unrelated subject matter.
+  to show retrieval works across unrelated subject matter.
 
 The corpus intentionally contains conflicting data-retention statements (for
 example, between the regulations and the sample policy) so the conflict-detection
