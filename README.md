@@ -1,4 +1,5 @@
 ![GitHub License](https://img.shields.io/github/license/murchu27/GroundedDoc)
+[![CI](https://github.com/murchu27/GroundedDoc/actions/workflows/ci.yml/badge.svg)](https://github.com/murchu27/GroundedDoc/actions/workflows/ci.yml)
 
 # GroundedDoc Agent
 
