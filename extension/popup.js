@@ -62,6 +62,28 @@ function renderCitation(label, citation, cssClass) {
   return block;
 }
 
+function renderSummary(parent, text) {
+  const block = document.createElement("div");
+  block.className = "summary-block";
+
+  const summaryText = appendText(block, "p", text, "summary-text collapsed");
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "summary-toggle";
+  toggle.textContent = "Show full summary";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+    summaryText.classList.toggle("collapsed", expanded);
+    toggle.textContent = expanded ? "Show full summary" : "Show less";
+  });
+  block.appendChild(toggle);
+
+  parent.appendChild(block);
+}
+
 function renderFinding(finding) {
   const article = document.createElement("article");
   article.className = "finding";
@@ -75,7 +97,7 @@ function renderFinding(finding) {
   article.appendChild(badge);
 
   appendText(article, "h2", formatLabel(finding.topic));
-  appendText(article, "p", finding.summary ?? "");
+  renderSummary(article, finding.summary ?? "");
 
   article.appendChild(renderCitation("Policy", finding.policy_citation, "citation-policy"));
   article.appendChild(renderCitation("Regulation", finding.regulation_citation, "citation-regulation"));

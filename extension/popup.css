@@ -124,6 +124,38 @@ header h1 {
   line-height: 1.4;
 }
 
+.summary-block {
+  margin: 4px 0;
+}
+
+.summary-block .summary-text {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.summary-text.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.summary-toggle {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.summary-toggle:hover {
+  color: #1d4ed8;
+}
+
 .citation {
   margin-top: 6px;
   padding: 6px;
