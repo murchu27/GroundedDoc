@@ -4,6 +4,12 @@ const analyzeBtn = document.getElementById("analyze-btn");
 const statusEl = document.getElementById("status");
 const resultsEl = document.getElementById("results");
 const disclaimerEl = document.getElementById("disclaimer");
+const FINDING_STATUSES = new Set([
+  "aligned",
+  "potential_gap",
+  "insufficient_evidence",
+  "needs_review",
+]);
 
 async function loadSettings() {
   const stored = await chrome.storage.sync.get(["apiUrl", "apiKey"]);
@@ -22,29 +28,59 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function formatLabel(value) {
+  return String(value ?? "").replaceAll("_", " ");
+}
+
+function appendText(parent, tag, text, className) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  el.textContent = text;
+  parent.appendChild(el);
+  return el;
+}
+
 function renderCitation(label, citation, cssClass) {
+  const block = document.createElement("div");
+  block.className = citation ? `citation ${cssClass}` : `citation missing ${cssClass}`;
+
+  appendText(block, "strong", label);
+  block.appendChild(document.createElement("br"));
+
   if (!citation) {
-    return `<div class="citation missing ${cssClass}"><strong>${label}</strong><br />No citation found.</div>`;
+    block.appendChild(document.createTextNode("No citation found."));
+    return block;
   }
-  return `
-    <div class="citation ${cssClass}">
-      <strong>${label}</strong><br />
-      ${citation.doc_id} §${citation.section_path}<br />
-      ${citation.text || ""}
-    </div>
-  `;
+
+  appendText(block, "span", `${citation.doc_id ?? ""} §${citation.section_path ?? ""}`);
+  block.appendChild(document.createElement("br"));
+
+  if (citation.text) {
+    appendText(block, "span", citation.text);
+  }
+
+  return block;
 }
 
 function renderFinding(finding) {
-  return `
-    <article class="finding">
-      <span class="badge ${finding.status}">${finding.status.replaceAll("_", " ")}</span>
-      <h2>${finding.topic.replaceAll("_", " ")}</h2>
-      <p>${finding.summary}</p>
-      ${renderCitation("Policy", finding.policy_citation, "citation-policy")}
-      ${renderCitation("Regulation", finding.regulation_citation, "citation-regulation")}
-    </article>
-  `;
+  const article = document.createElement("article");
+  article.className = "finding";
+
+  const badge = document.createElement("span");
+  badge.className = "badge";
+  if (FINDING_STATUSES.has(finding.status)) {
+    badge.classList.add(finding.status);
+  }
+  badge.textContent = formatLabel(finding.status);
+  article.appendChild(badge);
+
+  appendText(article, "h2", formatLabel(finding.topic));
+  appendText(article, "p", finding.summary ?? "");
+
+  article.appendChild(renderCitation("Policy", finding.policy_citation, "citation-policy"));
+  article.appendChild(renderCitation("Regulation", finding.regulation_citation, "citation-regulation"));
+
+  return article;
 }
 
 async function getActiveTabPage() {
@@ -61,7 +97,7 @@ async function getActiveTabPage() {
 
 analyzeBtn.addEventListener("click", async () => {
   analyzeBtn.disabled = true;
-  resultsEl.innerHTML = "";
+  resultsEl.replaceChildren();
   disclaimerEl.classList.add("hidden");
   setStatus("Extracting page text...");
 
@@ -95,7 +131,11 @@ analyzeBtn.addEventListener("click", async () => {
     }
 
     disclaimerEl.classList.remove("hidden");
-    resultsEl.innerHTML = (data.findings || []).map(renderFinding).join("");
+    const fragment = document.createDocumentFragment();
+    for (const finding of data.findings || []) {
+      fragment.appendChild(renderFinding(finding));
+    }
+    resultsEl.appendChild(fragment);
     setStatus(
       `Done. ${data.gap_count || 0} potential gaps, ${data.review_count || 0} need review, ${data.refused_count || 0} insufficient evidence.`,
     );

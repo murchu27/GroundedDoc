@@ -311,6 +311,11 @@ footer/aside, lines 1-13) and returns it on an `extract-page-text` message.
 `/analyze`, and renders findings with policy/regulation citations. Requests are
 informational only; a disclaimer is always shown.
 
+Findings are built with DOM APIs (`createElement`, `textContent`, `replaceChildren`)
+rather than `innerHTML`, so API-derived summaries and citation snippets cannot inject
+HTML. Finding status values are allowlisted before being applied as CSS classes on the
+badge (`FINDING_STATUSES` in `popup.js`).
+
 ---
 
 ## 9. Evaluation and CI
