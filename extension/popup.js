@@ -83,16 +83,57 @@ function renderFinding(finding) {
   return article;
 }
 
-async function getActiveTabPage() {
+function buildStatusMessage(data) {
+  return `Done. ${data.gap_count || 0} potential gaps, ${data.review_count || 0} need review, ${data.refused_count || 0} insufficient evidence.`;
+}
+
+function displayAnalysis(data, statusMessage) {
+  disclaimerEl.classList.remove("hidden");
+  const fragment = document.createDocumentFragment();
+  for (const finding of data.findings || []) {
+    fragment.appendChild(renderFinding(finding));
+  }
+  resultsEl.replaceChildren(fragment);
+  setStatus(statusMessage || buildStatusMessage(data));
+}
+
+async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) {
     throw new Error("No active tab found.");
   }
+  return tab;
+}
+
+async function getActiveTabPage() {
+  const tab = await getActiveTab();
   const response = await chrome.tabs.sendMessage(tab.id, { type: "extract-page-text" });
   if (!response?.text) {
     throw new Error("Could not extract page text.");
   }
   return response;
+}
+
+async function storeAnalysisInPage(url, data, statusMessage) {
+  const tab = await getActiveTab();
+  await chrome.tabs.sendMessage(tab.id, {
+    type: "store-analysis-result",
+    url,
+    data,
+    statusMessage,
+  });
+}
+
+async function restoreCachedAnalysis() {
+  try {
+    const tab = await getActiveTab();
+    const cached = await chrome.tabs.sendMessage(tab.id, { type: "get-cached-analysis" });
+    if (cached?.data) {
+      displayAnalysis(cached.data, cached.statusMessage);
+    }
+  } catch {
+    // No content script on this page (e.g. chrome:// URLs).
+  }
 }
 
 analyzeBtn.addEventListener("click", async () => {
@@ -130,15 +171,9 @@ analyzeBtn.addEventListener("click", async () => {
       throw new Error(data.error);
     }
 
-    disclaimerEl.classList.remove("hidden");
-    const fragment = document.createDocumentFragment();
-    for (const finding of data.findings || []) {
-      fragment.appendChild(renderFinding(finding));
-    }
-    resultsEl.appendChild(fragment);
-    setStatus(
-      `Done. ${data.gap_count || 0} potential gaps, ${data.review_count || 0} need review, ${data.refused_count || 0} insufficient evidence.`,
-    );
+    const statusMessage = buildStatusMessage(data);
+    displayAnalysis(data, statusMessage);
+    await storeAnalysisInPage(page.url, data, statusMessage);
   } catch (error) {
     setStatus(error.message || "Analysis failed.");
   } finally {
@@ -146,4 +181,4 @@ analyzeBtn.addEventListener("click", async () => {
   }
 });
 
-loadSettings();
+loadSettings().then(() => restoreCachedAnalysis());

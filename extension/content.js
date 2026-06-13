@@ -72,6 +72,25 @@ function extractPageText() {
   return (clone.innerText || clone.textContent || "").trim();
 }
 
+let cachedAnalysis = null;
+
+function clearCachedAnalysis() {
+  cachedAnalysis = null;
+}
+
+function trackUrlChanges() {
+  window.addEventListener("popstate", clearCachedAnalysis);
+  for (const method of ["pushState", "replaceState"]) {
+    const original = history[method];
+    history[method] = function (...args) {
+      original.apply(this, args);
+      clearCachedAnalysis();
+    };
+  }
+}
+
+trackUrlChanges();
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "extract-page-text") {
     sendResponse({
@@ -79,6 +98,29 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       url: window.location.href,
       title: document.title,
     });
+    return true;
   }
-  return true;
+
+  if (message.type === "store-analysis-result") {
+    if (message.url === window.location.href) {
+      cachedAnalysis = {
+        url: message.url,
+        data: message.data,
+        statusMessage: message.statusMessage,
+      };
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message.type === "get-cached-analysis") {
+    if (cachedAnalysis?.url === window.location.href) {
+      sendResponse(cachedAnalysis);
+    } else {
+      sendResponse(null);
+    }
+    return true;
+  }
+
+  return false;
 });
