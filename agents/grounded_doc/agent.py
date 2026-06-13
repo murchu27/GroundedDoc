@@ -1,5 +1,6 @@
 from google.adk.agents.llm_agent import Agent
 from google.adk.agents.sequential_agent import SequentialAgent
+from grounded_doc_agent.config.settings import ADK_GEMINI_MODEL
 
 from grounded_doc_agent.agents.tools import (
     get_conflict_report,
@@ -26,7 +27,7 @@ Return the verified answer with citations preserved.
 """
 
 research_agent = Agent(
-    model="gemini-3.1-flash-lite",
+    model=ADK_GEMINI_MODEL,
     name="research_agent",
     description="Retrieves grounded answers and conflict reports from the document index.",
     instruction=research_instruction,
@@ -34,7 +35,7 @@ research_agent = Agent(
 )
 
 verifier_agent = Agent(
-    model="gemini-3.1-flash-lite",
+    model=ADK_GEMINI_MODEL,
     name="verifier_agent",
     description="Verifies citations and conflict handling in grounded answers.",
     instruction=verifier_instruction,

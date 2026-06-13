@@ -51,6 +51,16 @@ python -m grounded_doc_agent.eval.run_eval --variant full_pipeline
 python -m grounded_doc_agent.eval.run_eval --compare-ab
 ```
 
+## Configuration
+
+The following environment variables are available:
+
+- `GOOGLE_API_KEY` — required for ADK web UI and LLM synthesis
+- `GROUNDED_GEMINI_MODEL` — synthesis + analyze LLM path (default: `gemini-3.1-flash-lite`)
+- `GROUNDED_ADK_GEMINI_MODEL` — ADK orchestration agents (optional; defaults to `GROUNDED_GEMINI_MODEL`)
+
+Extractive synthesis works without `GOOGLE_API_KEY`; set a key only when you want Gemini-powered answers.
+
 ## Optional: ADK web UI
 
 For interactive exploration there is an optional Agent Development Kit (ADK)
