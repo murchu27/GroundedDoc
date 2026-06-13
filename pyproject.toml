@@ -1,5 +1,7 @@
 [project]
 name = "grounded-doc-agent"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
 version = "0.1.0"
 description = "Multi-hop, conflict-aware document intelligence agent with MLflow evaluation"
 readme = "README.md"
