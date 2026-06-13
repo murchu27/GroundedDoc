@@ -62,7 +62,7 @@ There are 60 tracked files. Grouped by role:
 | Browser extension | [extension/](../extension/) (`manifest.json`, `content.js`, `popup.js`, `popup.html`, `popup.css`) |
 | Infra / deploy | [infra/Dockerfile](../infra/Dockerfile), [infra/cloudbuild.yaml](../infra/cloudbuild.yaml), [scripts/deploy_cloud_run.sh](../scripts/deploy_cloud_run.sh) |
 | CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml) |
-| Tests | [tests/](../tests/) (`conftest.py`, `test_pipeline.py`, `test_analyze.py`, `test_api_auth.py`, `test_chunker.py`, `test_scorers.py`) |
+| Tests | [tests/](../tests/) (`conftest.py`, `test_pipeline.py`, `test_pipeline_runtime.py`, `test_analyze.py`, `test_api_auth.py`, `test_chunker.py`, `test_scorers.py`, `test_settings.py`) |
 | Sample corpus | [data/corpus/](../data/corpus/) (GDPR/PIPEDA/ACME summaries, `regulatory/` requirement cards, FastAPI docs) |
 | Docs | [docs/architecture.md](architecture.md), this file |
 
@@ -290,17 +290,19 @@ or the LLM wording, expect those tests to move.
 
 - Endpoints: `GET /health`, `POST /query`, `POST /analyze`, `POST /ingest`,
   `GET /conflicts`, `POST /eval/predict`.
-- The pipeline is a lazily-created module global (`_pipeline`, `get_pipeline`, lines
-  60-66); on first use it builds the index if `ingestion_report.json` is missing.
-- Auth is opt-in: `_check_api_key` (lines 69-77) only enforces the `X-API-Key` header
-  when `GROUNDED_REQUIRE_API_KEY=true`. `/health` is intentionally unauthenticated.
-  This is well covered by [tests/test_api_auth.py](../tests/test_api_auth.py).
+- All endpoints delegate to the shared library singleton
+  (`get_pipeline`, `reset_pipeline` in
+  [pipeline.py](../grounded_doc_agent/agents/pipeline.py)). On first use,
+  `get_pipeline()` syncs the index from GCS (when configured), builds the index if
+  `ingestion_report.json` is missing, and loads it once per process. `/ingest` calls
+  `reset_pipeline()` after a rebuild so the next request picks up fresh state.
+- Auth is opt-in: `_check_api_key` only enforces the `X-API-Key` header when
+  `GROUNDED_REQUIRE_API_KEY=true`. `/health` is intentionally unauthenticated. This is
+  well covered by [tests/test_api_auth.py](../tests/test_api_auth.py).
 - CORS origins come from `GROUNDED_CORS_ORIGINS` (default `*`); note
-  `allow_credentials` is set to `"*" not in cors_origins` (line 54), i.e. credentials
-  are disabled whenever the wildcard origin is used (a deliberate
-  browser-spec-compliance choice).
-- The `lifespan` handler (lines 35-38) calls `maybe_sync_index`, which pulls the index
-  from GCS when the GCS storage backend is configured.
+  `allow_credentials` is set to `"*" not in cors_origins`, i.e. credentials are
+  disabled whenever the wildcard origin is used (a deliberate browser-spec-compliance
+  choice).
 
 ### Chrome extension ([extension/](../extension/))
 
@@ -396,8 +398,8 @@ python -m grounded_doc_agent.ingestion.cli
 # or the console script: grounded-ingest
 
 # One-off query (extractive answer unless GOOGLE_API_KEY is set)
-python -c "from grounded_doc_agent.agents.pipeline import DocumentPipeline; \
-print(DocumentPipeline().run('Compare GDPR vs PIPEDA retention').answer)"
+python -c "from grounded_doc_agent.agents.pipeline import get_pipeline; \
+print(get_pipeline().run('Compare GDPR vs PIPEDA retention').answer)"
 
 # Tests (require the index; conftest builds it on first run)
 pytest -q
@@ -452,13 +454,13 @@ sharp edge.
   [bm25.py](../grounded_doc_agent/retrieval/bm25.py) `append`/`remove_doc` (lines
   23-30) re-tokenize and rebuild the whole `BM25Okapi`. The `/analyze` overlay
   ingest+remove therefore rebuilds both BM25 indexes twice per request.
-- **Pipeline reconstructed per call.** `predict_for_eval` builds a fresh
-  `DocumentPipeline()` every invocation
-  ([pipeline.py](../grounded_doc_agent/agents/pipeline.py) line 136), and so do the
-  ADK tools `query_documents` / `get_conflict_report`
-  ([tools.py](../grounded_doc_agent/agents/tools.py) lines 8, 14). Each construction
-  reloads the entire index from disk. The FastAPI path avoids this via the
-  `_pipeline` global, but eval and ADK do not.
+- **Shared pipeline singleton.** `get_pipeline()` in
+  [pipeline.py](../grounded_doc_agent/agents/pipeline.py) lazily loads the index once
+  per process. The FastAPI service, ADK tools (`query_documents`,
+  `get_conflict_report`), and `predict_for_eval` all use this shared instance.
+  `reset_pipeline()` clears the singleton after `/ingest` rebuilds indexes. Unit tests
+  that need an isolated index still construct `DocumentPipeline(indexed_pipeline)`
+  directly.
 
 **State / concurrency**
 

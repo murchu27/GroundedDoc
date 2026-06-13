@@ -14,6 +14,11 @@ from grounded_doc_agent.agents.synthesizer import (
 from grounded_doc_agent.config.settings import INDEX_DIR, MLFLOW_EXPERIMENT, MLFLOW_TRACKING_URI
 from grounded_doc_agent.ingestion.pipeline import IngestionPipeline
 from grounded_doc_agent.models import AgentResponse, PipelineTraceSpan, QueryType
+from grounded_doc_agent.storage.backend import maybe_sync_index
+
+
+_pipeline: DocumentPipeline | None = None
+_index_synced = False
 
 
 class DocumentPipeline:
@@ -121,6 +126,23 @@ class DocumentPipeline:
             span.set_attributes({k: str(v) for k, v in attributes.items()})
 
 
+def get_pipeline() -> DocumentPipeline:
+    global _pipeline, _index_synced
+    if not _index_synced:
+        maybe_sync_index(INDEX_DIR)
+        _index_synced = True
+    if _pipeline is None:
+        if not (INDEX_DIR / "ingestion_report.json").exists():
+            IngestionPipeline().run()
+        _pipeline = DocumentPipeline()
+    return _pipeline
+
+
+def reset_pipeline() -> None:
+    global _pipeline
+    _pipeline = None
+
+
 def _merge_contexts(
     left: list,
     right: list,
@@ -133,5 +155,5 @@ def _merge_contexts(
 
 def predict_for_eval(inputs: dict | str, variant: str = "full_pipeline") -> dict:
     query = inputs["query"] if isinstance(inputs, dict) else str(inputs)
-    response = DocumentPipeline().run(query, variant=variant)
+    response = get_pipeline().run(query, variant=variant)
     return response.to_dict()

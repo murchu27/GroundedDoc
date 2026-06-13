@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from grounded_doc_agent.agents.pipeline import DocumentPipeline
+from grounded_doc_agent.agents.pipeline import get_pipeline
 
 
 def query_documents(query: str) -> dict:
     """Answer a question over the indexed document corpus with citations."""
-    response = DocumentPipeline().run(query)
+    response = get_pipeline().run(query)
     return response.to_dict()
 
 
 def get_conflict_report() -> dict:
     """Return detected cross-document claim conflicts from the indexed corpus."""
-    pipeline = DocumentPipeline().pipeline
+    pipeline = get_pipeline().pipeline
     conflicts = pipeline.claims_store.list_conflicts()
     return {
         "conflicts": [

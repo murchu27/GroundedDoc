@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -9,12 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from grounded_doc_agent.agents.analyze import analyze_policy
-from grounded_doc_agent.agents.pipeline import DocumentPipeline, predict_for_eval
+from grounded_doc_agent.agents.pipeline import get_pipeline, reset_pipeline, predict_for_eval
 from grounded_doc_agent.config.settings import INDEX_DIR
 from grounded_doc_agent.ingestion.pipeline import IngestionPipeline
-from grounded_doc_agent.storage.backend import maybe_sync_index
-
-_pipeline: DocumentPipeline | None = None
 
 
 class QueryRequest(BaseModel):
@@ -32,17 +28,10 @@ class AnalyzeRequest(BaseModel):
     questions: list[str] = Field(default_factory=list)
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    maybe_sync_index(INDEX_DIR)
-    yield
-
-
 app = FastAPI(
     title="GroundedDoc Agent API",
     description="Conflict-aware document intelligence agent",
     version="0.1.0",
-    lifespan=lifespan,
 )
 
 cors_origins = [
@@ -55,15 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def get_pipeline() -> DocumentPipeline:
-    global _pipeline
-    if _pipeline is None:
-        if not (INDEX_DIR / "ingestion_report.json").exists():
-            IngestionPipeline().run()
-        _pipeline = DocumentPipeline()
-    return _pipeline
 
 
 def _check_api_key(
@@ -115,8 +95,7 @@ def ingest(
         if report_path.exists():
             return {"status": "skipped", "reason": "index already exists"}
     report = IngestionPipeline().run()
-    global _pipeline
-    _pipeline = DocumentPipeline()
+    reset_pipeline()
     return {"status": "completed", **report}
 
 

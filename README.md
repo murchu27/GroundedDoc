@@ -41,8 +41,8 @@ pip install .
 # Build indexes from sample corpus
 python -m grounded_doc_agent.ingestion.cli
 
-# Run a query locally
-python -c "from grounded_doc_agent.agents.pipeline import DocumentPipeline; print(DocumentPipeline().run('Compare GDPR vs PIPEDA retention').answer)"
+# Run a query locally (uses the shared pipeline singleton)
+python -c "from grounded_doc_agent.agents.pipeline import get_pipeline; print(get_pipeline().run('Compare GDPR vs PIPEDA retention').answer)"
 
 # Run MLflow evaluation
 python -m grounded_doc_agent.eval.run_eval --variant full_pipeline
